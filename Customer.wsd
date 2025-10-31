@@ -1,0 +1,58 @@
+@startuml
+
+group "1. Оформление заказа"
+actor Customer #lightblue
+
+participant WebUI
+
+Customer -> WebUI: OrderRequest 
+
+participant OrderController
+
+WebUI -> OrderController: processOrder
+
+OrderController -> Database:saveOrderdeteils
+Database -[#Green]-> OrderController:orderSaved
+ 
+note right: Сохранение заказа в статусе "Ожидание оплаты"
+end
+
+group "2. Оплата "
+
+participant PaymentService
+
+alt #LightGreen "Успешная оплата"
+database Database 
+OrderController -> PaymentService: processPayment(paymentinfo)
+PaymentService -[#Green]-> OrderController:paymentResult
+else #Pink Ошибка оплаты
+PaymentService -[#Red]-> OrderController:paymentFailure(errore)
+OrderController -[#blue]-> NotificationService
+note right: Заказ сохраняется как предварительный
+end
+
+group "3. Подтверждение заказа"
+OrderController -> WebUI: orderConfimation(confirmationDetails)
+
+WebUI -> Customer:displayConfirmation(confirmationDetails)
+end
+participant NotificationService
+
+group "4. Изменение корзины"
+
+Customer -> WebUI: modifyCart(action, itemDetails)
+note right: Действие может быть: добавление,удаление,изменение количества.
+
+WebUI -> OrderController: updateCart(action, itemDetails) 
+OrderController -> Database: udateCartIntDB(carData)
+Database -[#green]-> OrderController:cartUpdateConfirmation
+OrderController -> WebUI:notifiCarUpdate(cartStatus)
+end
+
+group "5. Уыедомление менеджера"
+
+NotificationService -> WebUI: managerNotification (orderId,status)
+note left: Менеджер получает уведомление о новом заказе
+end
+
+@enduml
